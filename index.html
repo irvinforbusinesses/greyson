@@ -27,7 +27,6 @@
       color: #ccc;
       font-weight: 600;
       font-family: 'Poppins', sans-serif;
-      font-style: normal;
       letter-spacing: 0.04em;
     }
 
@@ -39,9 +38,9 @@
 
     .carousel-track {
       display: flex;
-      width: max-content;
       animation: scroll 18s linear infinite;
-      height: 300px;
+      will-change: transform;
+      backface-visibility: hidden;
     }
 
     .carousel-item {
@@ -54,7 +53,8 @@
     .carousel-item img,
     .carousel-item video {
       width: 100%;
-      height: 100%;
+      aspect-ratio: 9 / 16;
+      height: auto;
       border-radius: 10px;
       object-fit: cover;
       transition: opacity 0.3s;
@@ -65,8 +65,8 @@
     }
 
     @keyframes scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
+      from { transform: translateX(0); }
+      to { transform: translateX(-100%); }
     }
 
     @keyframes float-glow {
@@ -113,10 +113,6 @@
       display: flex;
       justify-content: center;
       gap: 20px;
-    }
-
-    .social-icons a {
-      display: inline-block;
     }
 
     .social-icons img {
@@ -224,9 +220,6 @@
         min-width: 210px;
         margin: 0 7px;
       }
-      .carousel-track {
-        height: 420px;
-      }
     }
 
     @media (max-width: 600px) {
@@ -236,10 +229,6 @@
 
       h2 {
         font-size: 1.5rem;
-      }
-
-      .carousel-track {
-        height: 350px;
       }
 
       .carousel-item {
@@ -330,56 +319,41 @@
       return array;
     }
 
-    function createCarouselItems(container, imgs, isBlurred = false, videos = []) {
+    function createCarouselItems(container, imgs, videos = []) {
       const fragment = document.createDocumentFragment();
-      let videoIndex = 0;
+      const combined = [...imgs];
 
-      imgs.forEach((img, i) => {
+      // Add some videos
+      videos.forEach((vid, i) => {
         const item = document.createElement('div');
         item.className = 'carousel-item';
-        item.innerHTML = `<img src="${img}" onclick="openLightbox('${img}', false)">`;
-        fragment.appendChild(item);
-
-        if (!isBlurred && (i + 1) % 2 === 0 && videoIndex < videos.length) {
-          const video = document.createElement('div');
-          video.className = 'carousel-item';
-          video.innerHTML = `<video autoplay loop muted playsinline onclick="openLightbox('${videos[videoIndex]}', true)">
-                               <source src="${videos[videoIndex]}" type="video/mp4">
-                             </video>`;
-          fragment.appendChild(video);
-          videoIndex++;
-        }
+        item.innerHTML = `<video autoplay loop muted playsinline onclick="openLightbox('${vid}', true)">
+                             <source src="${vid}" type="video/mp4">
+                           </video>`;
+        combined.splice(i * 2, 0, item.outerHTML);
       });
 
-      imgs.forEach((img, i) => {
+      // First loop
+      combined.forEach(img => {
         const item = document.createElement('div');
         item.className = 'carousel-item';
-        item.innerHTML = `<img src="${img}" onclick="openLightbox('${img}', false)">`;
+        item.innerHTML = typeof img === 'string' && img.includes('<video')
+          ? img
+          : `<img src="${img}" onclick="openLightbox('${img}', false)">`;
         fragment.appendChild(item);
-
-        if (!isBlurred && (i + 1) % 2 === 0 && videoIndex < videos.length * 2) {
-          const videoIdx = videoIndex - videos.length;
-          if (videoIdx < videos.length) {
-            const video = document.createElement('div');
-            video.className = 'carousel-item';
-            video.innerHTML = `<video autoplay loop muted playsinline onclick="openLightbox('${videos[videoIdx]}', true)">
-                                 <source src="${videos[videoIdx]}" type="video/mp4">
-                               </video>`;
-            fragment.appendChild(video);
-            videoIndex++;
-          }
-        }
       });
 
+      // Duplicate for infinite effect
+      container.appendChild(fragment.cloneNode(true));
       container.appendChild(fragment);
     }
 
     const carousel1 = document.getElementById('carousel1');
     const carousel2 = document.getElementById('carousel2');
-    const shuffledNormal = shuffle([...images]);
+    const shuffled = shuffle([...images]);
 
-    createCarouselItems(carousel1, shuffledNormal, false, videos);
-    createCarouselItems(carousel2, shuffledNormal, false, videos);
+    createCarouselItems(carousel1, shuffled, videos);
+    createCarouselItems(carousel2, shuffled, videos);
 
     function openLightbox(src, isVideo = false) {
       const lightbox = document.getElementById('lightbox');
