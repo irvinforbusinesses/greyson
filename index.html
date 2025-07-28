@@ -27,6 +27,7 @@
       color: #ccc;
       font-weight: 600;
       font-family: 'Poppins', sans-serif;
+      font-style: normal;
       letter-spacing: 0.04em;
     }
 
@@ -38,9 +39,18 @@
 
     .carousel-track {
       display: flex;
-      animation: scroll 18s linear infinite;
+      width: max-content;
+      /* Quitamos la animación inicial aquí para activarla vía JS después de cargar items */
+      height: 300px;
       will-change: transform;
-      backface-visibility: hidden;
+      /* Ocultamos el track hasta que esté listo para evitar salto */
+      visibility: hidden;
+    }
+
+    /* Animación definida para uso en JS */
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
 
     .carousel-item {
@@ -53,8 +63,7 @@
     .carousel-item img,
     .carousel-item video {
       width: 100%;
-      aspect-ratio: 9 / 16;
-      height: auto;
+      height: 100%;
       border-radius: 10px;
       object-fit: cover;
       transition: opacity 0.3s;
@@ -62,11 +71,6 @@
 
     .carousel-item img:hover {
       opacity: 0.65;
-    }
-
-    @keyframes scroll {
-      from { transform: translateX(0); }
-      to { transform: translateX(-100%); }
     }
 
     @keyframes float-glow {
@@ -113,6 +117,10 @@
       display: flex;
       justify-content: center;
       gap: 20px;
+    }
+
+    .social-icons a {
+      display: inline-block;
     }
 
     .social-icons img {
@@ -220,6 +228,9 @@
         min-width: 210px;
         margin: 0 7px;
       }
+      .carousel-track {
+        height: 420px;
+      }
     }
 
     @media (max-width: 600px) {
@@ -229,6 +240,10 @@
 
       h2 {
         font-size: 1.5rem;
+      }
+
+      .carousel-track {
+        height: 350px;
       }
 
       .carousel-item {
@@ -319,41 +334,55 @@
       return array;
     }
 
+    // Función para crear el contenido duplicado para scroll infinito
     function createCarouselItems(container, imgs, videos = []) {
       const fragment = document.createDocumentFragment();
-      const combined = [...imgs];
+      let videoIndex = 0;
 
-      // Add some videos
-      videos.forEach((vid, i) => {
-        const item = document.createElement('div');
-        item.className = 'carousel-item';
-        item.innerHTML = `<video autoplay loop muted playsinline onclick="openLightbox('${vid}', true)">
-                             <source src="${vid}" type="video/mp4">
-                           </video>`;
-        combined.splice(i * 2, 0, item.outerHTML);
-      });
+      // Función para añadir items (imgs y videos) una vez
+      function addItems() {
+        imgs.forEach((img, i) => {
+          const item = document.createElement('div');
+          item.className = 'carousel-item';
+          item.innerHTML = `<img src="${img}" onclick="openLightbox('${img}', false)">`;
+          fragment.appendChild(item);
 
-      // First loop
-      combined.forEach(img => {
-        const item = document.createElement('div');
-        item.className = 'carousel-item';
-        item.innerHTML = typeof img === 'string' && img.includes('<video')
-          ? img
-          : `<img src="${img}" onclick="openLightbox('${img}', false)">`;
-        fragment.appendChild(item);
-      });
+          if ((i + 1) % 2 === 0 && videoIndex < videos.length) {
+            const video = document.createElement('div');
+            video.className = 'carousel-item';
+            video.innerHTML = `<video autoplay loop muted playsinline onclick="openLightbox('${videos[videoIndex]}', true)">
+                                 <source src="${videos[videoIndex]}" type="video/mp4">
+                               </video>`;
+            fragment.appendChild(video);
+            videoIndex++;
+          }
+        });
+      }
 
-      // Duplicate for infinite effect
-      container.appendChild(fragment.cloneNode(true));
+      // Añadimos items dos veces para duplicar el contenido y hacer scroll infinito suave
+      addItems();
+      addItems();
+
       container.appendChild(fragment);
     }
 
     const carousel1 = document.getElementById('carousel1');
     const carousel2 = document.getElementById('carousel2');
-    const shuffled = shuffle([...images]);
+    const shuffledNormal = shuffle([...images]);
 
-    createCarouselItems(carousel1, shuffled, videos);
-    createCarouselItems(carousel2, shuffled, videos);
+    createCarouselItems(carousel1, shuffledNormal, videos);
+    createCarouselItems(carousel2, shuffledNormal, videos);
+
+    // Una vez creado el contenido, activamos la animación y hacemos visible el track
+    [carousel1, carousel2].forEach(carousel => {
+      // Obtener ancho total del contenido (antes de animar)
+      const scrollWidth = carousel.scrollWidth;
+
+      // Animación: desplazamos -50% del contenido original (que es la mitad de la longitud total ya que duplicamos contenido)
+      carousel.style.animation = `scroll 18s linear infinite`;
+      carousel.style.animationTimingFunction = 'linear';
+      carousel.style.visibility = 'visible';
+    });
 
     function openLightbox(src, isVideo = false) {
       const lightbox = document.getElementById('lightbox');
